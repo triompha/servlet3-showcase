@@ -10,6 +10,19 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chapter2</artifactId>
     <packaging>war</packaging>
+    
+     <pluginRepositories>
+        <pluginRepository>
+            <id>maven.java.net</id>
+            <name>Java.net Repository for Maven</name>
+            <url>https://maven.java.net/content/groups/promoted/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>maven2-repository.dev.java.net</id>
+            <name>Java.net Repository for Maven</name>
+            <url>http://download.java.net/maven/glassfish/</url>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencies>
         <dependency>
@@ -36,5 +49,41 @@
 
     <build>
         <finalName>chapter2</finalName>
+        <plugins>
+             <plugin>
+                <groupId>org.glassfish.embedded</groupId>
+                <artifactId>maven-embedded-glassfish-plugin</artifactId>
+                <version>3.1.2.2</version>
+                
+                <configuration>
+                    <port>9080</port>
+                    <autoDelete>true</autoDelete>
+                    <app>${project.build.directory}/${project.build.finalName}</app>
+                    <contextRoot>${project.build.finalName}</contextRoot>
+                    <name>${project.build.finalName}</name>
+                    <serverID>embedded</serverID>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.glassfish.main</groupId>
+                        <artifactId>simple-glassfish-api</artifactId>
+                        <version>4.0-b79</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.glassfish.main.extras</groupId>
+                        <artifactId>glassfish-embedded-all</artifactId>
+                        <version>4.0-b86</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

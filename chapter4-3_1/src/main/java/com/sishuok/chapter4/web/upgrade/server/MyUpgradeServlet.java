@@ -83,45 +83,46 @@ import java.io.IOException;
 @WebServlet(name = "myUpgradeServlet", urlPatterns = "/upgrade")
 public class MyUpgradeServlet extends HttpServlet {
 
-    @Override
-    protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+	@Override
+	protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
 
-        String connection = req.getHeader("Connection");
-        String upgrade = req.getHeader("Upgrade");
-        if(!"Upgrade".equalsIgnoreCase(connection) || upgrade == null) {
-            //400 错误请求
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return;
-        }
+		String connection = req.getHeader("Connection");
+		String upgrade = req.getHeader("Upgrade");
+		if(!"Upgrade".equalsIgnoreCase(connection) || upgrade == null) {
+			//400 错误请求
+			resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return;
+		}
 
-        //开始切换协议
-        switch (upgrade.toLowerCase()) {
-            case "echo" :
-                //协议升级处理器。此时可以调用它传些参数
-                EchoHttpUpgradeHandler echoHttpUpgradeHandler = req.upgrade(EchoHttpUpgradeHandler.class);
-                //告诉切换成功
-                resp.setStatus(HttpServletResponse.SC_SWITCHING_PROTOCOLS);
-                resp.setHeader("Upgrade", "echo");
-                resp.setHeader("Connection", "Upgrade");
-                //比如可以通过protocol头 告诉客户端支持的协议列表
-                resp.setHeader("protocol", "echo,time");
-                break;
-            case "time" :
-                TimeHttpUpgradeHandler timeHttpUpgradeHandler = req.upgrade(TimeHttpUpgradeHandler.class);
-                //告诉切换成功
-                resp.setStatus(HttpServletResponse.SC_SWITCHING_PROTOCOLS);
-                resp.setHeader("Upgrade", "time");
-                resp.setHeader("Connection", "Upgrade");
-                //比如可以通过protocol头 告诉客户端支持的协议列表
-                resp.setHeader("protocol", "echo,time");
-                break;
-            default:
-                //不支持的协议
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                //比如可以通过protocol头 告诉客户端支持的协议列表
-                resp.setHeader("protocol", "echo,time");
-                break;
-        }
+		//开始切换协议
 
-    }
+		switch (upgrade.toLowerCase()) {
+			case "echo" :
+				//协议升级处理器。此时可以调用它传些参数
+				EchoHttpUpgradeHandler echoHttpUpgradeHandler = req.upgrade(EchoHttpUpgradeHandler.class);
+				//告诉切换成功
+				resp.setStatus(HttpServletResponse.SC_SWITCHING_PROTOCOLS);
+				resp.setHeader("Upgrade", "echo");
+				resp.setHeader("Connection", "Upgrade");
+				//比如可以通过protocol头 告诉客户端支持的协议列表
+				resp.setHeader("protocol", "echo,time");
+				break;
+			case "time" :
+				TimeHttpUpgradeHandler timeHttpUpgradeHandler = req.upgrade(TimeHttpUpgradeHandler.class);
+				//告诉切换成功
+				resp.setStatus(HttpServletResponse.SC_SWITCHING_PROTOCOLS);
+				resp.setHeader("Upgrade", "time");
+				resp.setHeader("Connection", "Upgrade");
+				//比如可以通过protocol头 告诉客户端支持的协议列表
+				resp.setHeader("protocol", "echo,time");
+				break;
+			default:
+				//不支持的协议
+				resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				//比如可以通过protocol头 告诉客户端支持的协议列表
+				resp.setHeader("protocol", "echo,time");
+				break;
+		}
+
+	}
 }

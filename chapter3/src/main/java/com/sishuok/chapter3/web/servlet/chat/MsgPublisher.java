@@ -23,150 +23,150 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class MsgPublisher {
 
-    private volatile Map<String, Queue<AsyncContext>> usernameToAsyncContextMap = new ConcurrentHashMap();
+	private volatile Map<String, Queue<AsyncContext>> usernameToAsyncContextMap = new ConcurrentHashMap();
 
 
 
-    private MsgPublisher() {
-    }
+	private MsgPublisher() {
+	}
 
-    private static MsgPublisher instance = new MsgPublisher();
-    public static MsgPublisher getInstance() {
-        return instance;
-    }
-
-
-    public Collection<String> getLoginUsers() {
-        return new HashSet(usernameToAsyncContextMap.keySet());
-    }
+	private static MsgPublisher instance = new MsgPublisher();
+	public static MsgPublisher getInstance() {
+		return instance;
+	}
 
 
-    public void startAsync(HttpServletRequest req, final String username) {
-        //1、开启异步
-        final AsyncContext asyncContext = req.startAsync();
-        asyncContext.setTimeout(30L * 1000);
+	public Collection<String> getLoginUsers() {
+		return new HashSet(usernameToAsyncContextMap.keySet());
+	}
 
-        //将异步上下文加入到队列中，这样在未来可以推送消息
-        Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
-        if(queue == null) {
-            queue = new ConcurrentLinkedDeque();
-            usernameToAsyncContextMap.put(username, queue);
-        }
 
-        queue.add(asyncContext);
+	public void startAsync(HttpServletRequest req, final String username) {
+		//1、开启异步
+		final AsyncContext asyncContext = req.startAsync();
+		asyncContext.setTimeout(30L * 1000);
 
-        asyncContext.addListener(new AsyncListener() {
-            @Override
-            public void onComplete(final AsyncEvent event) throws IOException {
-                Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
-                if(queue != null) {
-                    queue.remove(event.getAsyncContext());
-                }
-            }
+		//将异步上下文加入到队列中，这样在未来可以推送消息
+		Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
+		if(queue == null) {
+			queue = new ConcurrentLinkedDeque();
+			usernameToAsyncContextMap.put(username, queue);
+		}
 
-            @Override
-            public void onTimeout(final AsyncEvent event) throws IOException {
-                event.getAsyncContext().complete();
-            }
+		queue.add(asyncContext);
 
-            @Override
-            public void onError(final AsyncEvent event) throws IOException {
-                Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
-                if(queue != null) {
-                    queue.remove(event.getAsyncContext());
-                }
-            }
+		asyncContext.addListener(new AsyncListener() {
+			@Override
+			public void onComplete(final AsyncEvent event) throws IOException {
+				Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
+				if(queue != null) {
+					queue.remove(event.getAsyncContext());
+				}
+			}
 
-            @Override
-            public void onStartAsync(final AsyncEvent event) throws IOException {
-            }
-        });
-    }
+			@Override
+			public void onTimeout(final AsyncEvent event) throws IOException {
+				event.getAsyncContext().complete();
+			}
 
-    public void login(String username) {
-        if (!usernameToAsyncContextMap.containsKey(username)) {
-            StringBuilder data = new StringBuilder();
-            data.append("{");
-            data.append("\"type\" : \"login\"");
-            data.append(",\"username\" : \"" + username + "\"");
-            data.append("}");
-            publish(null, username, data.toString());
-        }
-    }
+			@Override
+			public void onError(final AsyncEvent event) throws IOException {
+				Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
+				if(queue != null) {
+					queue.remove(event.getAsyncContext());
+				}
+			}
 
-    public void logout(String username) {
-        if(username == null) {
-            return;
-        }
-        Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
-        if(queue != null && queue.size() == 0) {
-            StringBuilder data = new StringBuilder();
-            data.append("{");
-            data.append("\"type\" : \"logout\"");
-            data.append(",\"username\" : \"" + username + "\"");
-            data.append("}");
-            publish(null, username, data.toString());
-            usernameToAsyncContextMap.remove(username);
-        }
-    }
+			@Override
+			public void onStartAsync(final AsyncEvent event) throws IOException {
+			}
+		});
+	}
 
-    public void send(String receiver, String sender, String msg) {
-        StringBuilder data = new StringBuilder();
-        data.append("{");
-        data.append("\"type\" : \"msg\"");
-        data.append(",\"username\" : \"" + sender + "\"");
-        data.append(",\"msg\" : \"" + msg + "\"");
-        data.append("}");
-        publish(receiver, sender, data.toString());
-    }
+	public void login(String username) {
+		if (!usernameToAsyncContextMap.containsKey(username)) {
+			StringBuilder data = new StringBuilder();
+			data.append("{");
+			data.append("\"type\" : \"login\"");
+			data.append(",\"username\" : \"" + username + "\"");
+			data.append("}");
+			publish(null, username, data.toString());
+		}
+	}
 
-    /**
-     *
-     * @param receiver 如果为空 表示发送给所有人
-     * @param sender
-     * @param data
-     */
-    private void publish(String receiver, String sender, String data) {
-        if (receiver == null || receiver.trim().length() == 0) {//发送给所有人
-            for (String loginUsername : usernameToAsyncContextMap.keySet()) {
-                if (loginUsername.equals(sender)) {
-                    continue;
-                }
-                Queue<AsyncContext> queue = usernameToAsyncContextMap.get(loginUsername);
-                if(queue != null) {
-                    Iterator<AsyncContext> iter = queue.iterator();
-                    while(iter.hasNext()) {
-                        AsyncContext asyncContext = iter.next();
-                        try {
-                            ServletResponse response = asyncContext.getResponse();
-                            PrintWriter out = response.getWriter();
-                            out.write(data);
-                            out.flush();
-                            asyncContext.complete();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-        } else { //私人消息
-            Queue<AsyncContext> queue = usernameToAsyncContextMap.get(receiver);
-            if(queue != null) {
-                Iterator<AsyncContext> iter = queue.iterator();
-                while(iter.hasNext()) {
-                    AsyncContext asyncContext = iter.next();
-                    try {
-                        ServletResponse response = asyncContext.getResponse();
-                        PrintWriter out = response.getWriter();
-                        out.write(data);
-                        out.flush();
-                        asyncContext.complete();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
+	public void logout(String username) {
+		if(username == null) {
+			return;
+		}
+		Queue<AsyncContext> queue = usernameToAsyncContextMap.get(username);
+		if(queue != null && queue.size() == 0) {
+			StringBuilder data = new StringBuilder();
+			data.append("{");
+			data.append("\"type\" : \"logout\"");
+			data.append(",\"username\" : \"" + username + "\"");
+			data.append("}");
+			publish(null, username, data.toString());
+			usernameToAsyncContextMap.remove(username);
+		}
+	}
+
+	public void send(String receiver, String sender, String msg) {
+		StringBuilder data = new StringBuilder();
+		data.append("{");
+		data.append("\"type\" : \"msg\"");
+		data.append(",\"username\" : \"" + sender + "\"");
+		data.append(",\"msg\" : \"" + msg + "\"");
+		data.append("}");
+		publish(receiver, sender, data.toString());
+	}
+
+	/**
+	 *
+	 * @param receiver 如果为空 表示发送给所有人
+	 * @param sender
+	 * @param data
+	 */
+	private void publish(String receiver, String sender, String data) {
+		if (receiver == null || receiver.trim().length() == 0) {//发送给所有人
+			for (String loginUsername : usernameToAsyncContextMap.keySet()) {
+				if (loginUsername.equals(sender)) {
+					continue;
+				}
+				Queue<AsyncContext> queue = usernameToAsyncContextMap.get(loginUsername);
+				if(queue != null) {
+					Iterator<AsyncContext> iter = queue.iterator();
+					while(iter.hasNext()) {
+						AsyncContext asyncContext = iter.next();
+						try {
+							ServletResponse response = asyncContext.getResponse();
+							PrintWriter out = response.getWriter();
+							out.write(data);
+							out.flush();
+							asyncContext.complete();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		} else { //私人消息
+			Queue<AsyncContext> queue = usernameToAsyncContextMap.get(receiver);
+			if(queue != null) {
+				Iterator<AsyncContext> iter = queue.iterator();
+				while(iter.hasNext()) {
+					AsyncContext asyncContext = iter.next();
+					try {
+						ServletResponse response = asyncContext.getResponse();
+						PrintWriter out = response.getWriter();
+						out.write(data);
+						out.flush();
+						asyncContext.complete();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	}
 
 }

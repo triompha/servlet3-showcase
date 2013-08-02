@@ -28,6 +28,41 @@
 
     <build>
         <finalName>chapter2-springmvc</finalName>
+         <plugins>
+             <plugin>
+                <groupId>org.glassfish.embedded</groupId>
+                <artifactId>maven-embedded-glassfish-plugin</artifactId>
+                <version>3.1.2.2</version>
+                <configuration>
+                    <port>9080</port>
+                    <autoDelete>true</autoDelete>
+                    <app>${project.build.directory}/${project.build.finalName}</app>
+                    <contextRoot>${project.build.finalName}</contextRoot>
+                    <name>${project.build.finalName}</name>
+                    <serverID>embedded</serverID>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.glassfish.main</groupId>
+                        <artifactId>simple-glassfish-api</artifactId>
+                        <version>4.0-b79</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.glassfish.main.extras</groupId>
+                        <artifactId>glassfish-embedded-all</artifactId>
+                        <version>4.0-b86</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <properties>
